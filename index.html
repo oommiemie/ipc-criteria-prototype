@@ -212,6 +212,95 @@ function Sidebar({ mobileOpen, onClose }) {
   );
 }
 
+function BulkGenerateInline({ onGenerate }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [count, setCount] = useState('10');
+  const [type, setType] = useState('number');
+  const [unit, setUnit] = useState('mg');
+
+  const submit = () => {
+    if (!name.trim() || !parseInt(count)) return;
+    onGenerate(name.trim(), count, type, unit);
+    setName(''); setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)}
+        className="px-3 py-2 rounded-lg bg-white border border-violet-300 text-violet-700 hover:bg-violet-50 text-xs font-medium flex items-center gap-1">
+        ⚡ สร้างชุดฟิลด์
+      </button>
+    );
+  }
+  return (
+    <div className="w-full p-3 rounded-xl bg-violet-50 border-2 border-violet-300">
+      <div className="text-xs font-semibold text-violet-800 mb-2">⚡ สร้างฟิลด์ชุดอัตโนมัติ (เช่น Punch 1-30)</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <input className="field-input text-sm" placeholder="ชื่อ base (เช่น Punch)"
+          value={name} onChange={e => setName(e.target.value)} autoFocus />
+        <input className="field-input text-sm" type="number" placeholder="จำนวน"
+          value={count} onChange={e => setCount(e.target.value)} />
+        <select className="field-input text-sm cursor-pointer"
+          value={type} onChange={e => setType(e.target.value)}>
+          <option value="number">Number</option>
+          <option value="text">Text</option>
+          <option value="pass_fail">Pass/Fail</option>
+        </select>
+        <input className="field-input text-sm" placeholder="หน่วย (mg, mm)"
+          value={unit} onChange={e => setUnit(e.target.value)} />
+      </div>
+      <div className="flex gap-2 mt-2">
+        <button type="button" onClick={submit}
+          className="flex-1 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-700">
+          สร้าง {parseInt(count) || 0} ฟิลด์ ({name || '...'} 1-{parseInt(count) || 'N'})
+        </button>
+        <button type="button" onClick={() => setOpen(false)}
+          className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50">
+          ยกเลิก
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CustomOptionAdder({ onAdd, placeholder }) {
+  const [adding, setAdding] = useState(false);
+  const [val, setVal] = useState('');
+  const submit = () => {
+    const v = val.trim();
+    if (!v) return;
+    onAdd(v);
+    setVal('');
+    setAdding(false);
+  };
+  if (!adding) {
+    return (
+      <button type="button" onClick={() => setAdding(true)}
+        className="text-xs text-emerald-700 hover:text-emerald-900 font-medium mt-1 flex items-center gap-1">
+        <Icon name="plus" className="w-3 h-3" /> เพิ่มตัวเลือก
+      </button>
+    );
+  }
+  return (
+    <div className="flex gap-1.5 mt-1.5">
+      <input className="field-input flex-1 text-sm"
+        placeholder={placeholder}
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') { e.preventDefault(); submit(); }
+          if (e.key === 'Escape') { setAdding(false); setVal(''); }
+        }}
+        autoFocus />
+      <button type="button" onClick={submit} disabled={!val.trim()}
+        className="px-3 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-40">เพิ่ม</button>
+      <button type="button" onClick={() => { setAdding(false); setVal(''); }}
+        className="px-3 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50">ยกเลิก</button>
+    </div>
+  );
+}
+
 function Toggle({ value, onChange, label }) {
   return (
     <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -480,7 +569,32 @@ function App() {
     textFormat: '',
     textExample: '',
     textRequired: true,
-    checkInterval: '30',
+    customFields: [
+      { id: 1, label: '', type: 'number', unit: '', target: '', tolerance: '', required: true, note: '' },
+    ],
+    customNote: '',
+    referenceBatchSize: '100000',
+    referenceBatchUnit: 'tablets',
+    referenceBatchDurationHr: '8',
+    triggers: {
+      time:      { on: true,  every: '30' },
+      quantity:  { on: false, every: '10000', unit: 'tablets', mode: 'fixed', percent: '10' },
+      milestone: { on: false, options: [
+        { id: 'batch_start',  label: 'เริ่ม batch',           on: true  },
+        { id: 'batch_mid',    label: 'กลาง batch',            on: false },
+        { id: 'batch_end',    label: 'ก่อนปิด batch',          on: true  },
+        { id: 'pre_compress', label: 'ก่อน compression',       on: false },
+        { id: 'post_coat',    label: 'หลัง coating',           on: false },
+      ]},
+      event: { on: false, options: [
+        { id: 'changeover',  label: 'หลัง changeover',                 on: true  },
+        { id: 'lot_change',  label: 'หลังเปลี่ยน lot วัตถุดิบ',        on: true  },
+        { id: 'cleaning',    label: 'หลัง equipment cleaning',         on: false },
+        { id: 'param',       label: 'หลัง parameter change',           on: false },
+        { id: 'maintenance', label: 'หลัง maintenance',                on: false },
+      ]},
+      oncePerBatch: { on: false },
+    },
     critical: false,
     active: true,
     samplingMethod: 'random',
@@ -531,10 +645,12 @@ function App() {
   };
 
   const [samplingMethods, setSamplingMethods] = useState([
-    { value: 'random', label: 'Random Sampling — สุ่มทั่วไป (เหมาะกับ batch ที่เป็นเนื้อเดียว)' },
-    { value: 'systematic', label: 'Systematic — สุ่มตามช่วงเวลา/ลำดับ (ทุก N units)' },
-    { value: 'stratified', label: 'Stratified — สุ่มแบ่งชั้น (ต้น/กลาง/ปลาย batch)' },
-    { value: 'square_root', label: '√n + 1 — ตามมาตรฐานเภสัชกรรม' },
+    { value: 'random',                label: 'Random Sampling — สุ่มทั่วไป (เม็ด/แคปซูล)' },
+    { value: 'systematic',            label: 'Systematic — สุ่มตามช่วงลำดับ (ทุก N units)' },
+    { value: 'stratified',            label: 'Stratified — สุ่มแบ่งชั้น (ต้น/กลาง/ปลาย batch)' },
+    { value: 'composite',             label: 'Composite — รวมตัวอย่างหลายจุด ผสมเป็น 1 (ของเหลว, ผง)' },
+    { value: 'multi_site_composite',  label: 'Multi-site Composite — เก็บหลายจุด ทดสอบแยก (Microbial, Heavy metals)' },
+    { value: 'square_root',           label: '√n + 1 — ตามมาตรฐาน European Ph. (Sterility, Containers)' },
   ]);
 
   const addSamplingMethod = ({ name, description }) => {
@@ -548,6 +664,33 @@ function App() {
     acc.push((acc[i - 1] || 0) + (parseInt(s.sampleSize) || 0));
     return acc;
   }, []);
+
+  const addCustomField = (defaults = {}) => {
+    setForm(p => ({
+      ...p,
+      customFields: [...p.customFields, {
+        id: Date.now() + Math.random(),
+        label: '', type: 'number', unit: '', target: '', tolerance: '', required: true, note: '',
+        ...defaults
+      }]
+    }));
+  };
+  const removeCustomField = (id) => {
+    setForm(p => ({ ...p, customFields: p.customFields.filter(f => f.id !== id) }));
+  };
+  const updateCustomField = (id, key, value) => {
+    setForm(p => ({ ...p, customFields: p.customFields.map(f => f.id === id ? { ...f, [key]: value } : f) }));
+  };
+  const bulkGenerateFields = (baseName, count, type, unit) => {
+    const n = parseInt(count) || 0;
+    if (!n || !baseName) return;
+    const fields = Array.from({ length: n }, (_, i) => ({
+      id: Date.now() + i + Math.random(),
+      label: `${baseName} ${i + 1}`,
+      type, unit, target: '', tolerance: '', required: true, note: '',
+    }));
+    setForm(p => ({ ...p, customFields: [...p.customFields, ...fields] }));
+  };
 
   const updateChecklistItem = (idx, value) => {
     setForm(prev => ({
@@ -567,6 +710,7 @@ function App() {
     pass_fail:  { wrap: 'bg-blue-50 border-blue-200',       iconBg: 'bg-blue-100 text-blue-700',       titleClr: 'text-blue-800',    subClr: 'text-blue-700/70',    label: 'Pass / Fail', desc: 'บันทึกผลเป็น ผ่าน หรือ ไม่ผ่าน', icon: 'shield' },
     visual:     { wrap: 'bg-amber-50 border-amber-200',     iconBg: 'bg-amber-100 text-amber-700',     titleClr: 'text-amber-800',   subClr: 'text-amber-700/70',   label: 'Visual', desc: 'ตรวจด้วยสายตาตาม checklist', icon: 'info' },
     text:       { wrap: 'bg-slate-50 border-slate-200',     iconBg: 'bg-slate-100 text-slate-700',     titleClr: 'text-slate-800',   subClr: 'text-slate-700/70',   label: 'Text', desc: 'บันทึกเป็นข้อความอิสระ', icon: 'file' },
+    custom:     { wrap: 'bg-violet-50 border-violet-200',   iconBg: 'bg-violet-100 text-violet-700',   titleClr: 'text-violet-800',  subClr: 'text-violet-700/70',  label: 'Custom Multi-Field', desc: 'กำหนดฟิลด์เอง — เหมาะกับ Calibration, หัวตอก, Component check', icon: 'cog' },
   };
   const meta = criteriaTypeMeta[form.criteriaType] || criteriaTypeMeta.numeric;
 
@@ -576,28 +720,99 @@ function App() {
   const calcMin = hasCalc ? +(targetNum - targetNum * toleranceNum / 100).toFixed(4) : '';
   const calcMax = hasCalc ? +(targetNum + targetNum * toleranceNum / 100).toFixed(4) : '';
 
-  const units = [
-    { value: 'mg', label: 'mg — มิลลิกรัม' },
-    { value: 'g', label: 'g — กรัม' },
-    { value: 'kg', label: 'kg — กิโลกรัม' },
-    { value: 'mcg', label: 'mcg — ไมโครกรัม' },
-    { value: 'mm', label: 'mm — มิลลิเมตร' },
-    { value: 'cm', label: 'cm — เซนติเมตร' },
-    { value: 'ml', label: 'ml — มิลลิลิตร' },
-    { value: 'l', label: 'L — ลิตร' },
-    { value: 'min', label: 'min — นาที' },
-    { value: 'sec', label: 'sec — วินาที' },
-    { value: 'hr', label: 'hr — ชั่วโมง' },
-    { value: 'percent', label: '% — เปอร์เซ็นต์' },
-    { value: 'ppm', label: 'ppm — ส่วนในล้านส่วน' },
-    { value: 'n', label: 'N — Newton (ความแข็ง)' },
-    { value: 'kpa', label: 'kPa — ความดัน' },
-    { value: 'celsius', label: '°C — องศาเซลเซียส' },
-    { value: 'ph', label: 'pH — ความเป็นกรด-ด่าง' },
-    { value: 'cps', label: 'cps — ความหนืด' },
-    { value: 'rpm', label: 'rpm — รอบต่อนาที' },
-    { value: 'count', label: 'count — จำนวน (เม็ด/ชิ้น)' },
-  ];
+  const [units, setUnits] = useState([
+    // Mass / น้ำหนัก
+    { value: 'pg',       label: 'pg — พิโคกรัม [Mass]' },
+    { value: 'ng',       label: 'ng — นาโนกรัม [Mass]' },
+    { value: 'mcg',      label: 'mcg (µg) — ไมโครกรัม [Mass]' },
+    { value: 'mg',       label: 'mg — มิลลิกรัม [Mass]' },
+    { value: 'g',        label: 'g — กรัม [Mass]' },
+    { value: 'kg',       label: 'kg — กิโลกรัม [Mass]' },
+    // Length / ความยาว
+    { value: 'nm',       label: 'nm — นาโนเมตร [Length]' },
+    { value: 'um',       label: 'µm — ไมโครเมตร [Length]' },
+    { value: 'mm',       label: 'mm — มิลลิเมตร [Length]' },
+    { value: 'cm',       label: 'cm — เซนติเมตร [Length]' },
+    { value: 'm',        label: 'm — เมตร [Length]' },
+    { value: 'inch',     label: 'inch — นิ้ว [Length]' },
+    // Volume / ปริมาตร
+    { value: 'ul',       label: 'µl — ไมโครลิตร [Volume]' },
+    { value: 'ml',       label: 'ml — มิลลิลิตร [Volume]' },
+    { value: 'l',        label: 'L — ลิตร [Volume]' },
+    // Concentration / ความเข้มข้น
+    { value: 'percent',  label: '% — เปอร์เซ็นต์ [Concentration]' },
+    { value: 'percent_ww', label: '%w/w — เปอร์เซ็นต์ น้ำหนัก/น้ำหนัก [Concentration]' },
+    { value: 'percent_wv', label: '%w/v — เปอร์เซ็นต์ น้ำหนัก/ปริมาตร [Concentration]' },
+    { value: 'percent_vv', label: '%v/v — เปอร์เซ็นต์ ปริมาตร/ปริมาตร [Concentration]' },
+    { value: 'ppm',      label: 'ppm — ส่วนต่อล้าน [Concentration]' },
+    { value: 'ppb',      label: 'ppb — ส่วนต่อพันล้าน [Concentration]' },
+    { value: 'mg_ml',    label: 'mg/ml — มก./มล. [Concentration]' },
+    { value: 'mg_g',     label: 'mg/g — มก./ก. [Concentration]' },
+    { value: 'g_l',      label: 'g/L — กรัม/ลิตร [Concentration]' },
+    { value: 'mmol_l',   label: 'mmol/L — มิลลิโมล/ลิตร [Concentration]' },
+    { value: 'meq',      label: 'mEq — มิลลิเทียบเท่า [Concentration]' },
+    { value: 'iu',       label: 'IU — หน่วยสากล (International Unit)' },
+    // Time / เวลา
+    { value: 'ms',       label: 'ms — มิลลิวินาที [Time]' },
+    { value: 'sec',      label: 'sec — วินาที [Time]' },
+    { value: 'min',      label: 'min — นาที [Time]' },
+    { value: 'hr',       label: 'hr — ชั่วโมง [Time]' },
+    { value: 'day',      label: 'day — วัน [Time]' },
+    // Temperature
+    { value: 'celsius',  label: '°C — องศาเซลเซียส [Temperature]' },
+    { value: 'fahrenheit', label: '°F — องศาฟาเรนไฮต์ [Temperature]' },
+    { value: 'kelvin',   label: 'K — เคลวิน [Temperature]' },
+    // Pressure / ความดัน
+    { value: 'pa',       label: 'Pa — ปาสคาล [Pressure]' },
+    { value: 'kpa',      label: 'kPa — กิโลปาสคาล [Pressure]' },
+    { value: 'mpa',      label: 'MPa — เมกะปาสคาล [Pressure]' },
+    { value: 'bar',      label: 'bar — บาร์ [Pressure]' },
+    { value: 'mbar',     label: 'mbar — มิลลิบาร์ [Pressure]' },
+    { value: 'psi',      label: 'psi — ปอนด์/ตร.นิ้ว [Pressure]' },
+    { value: 'mmhg',     label: 'mmHg — มิลลิเมตรปรอท [Pressure]' },
+    { value: 'atm',      label: 'atm — บรรยากาศ [Pressure]' },
+    // Force / แรง
+    { value: 'n',        label: 'N — Newton [Force, Hardness]' },
+    { value: 'kn',       label: 'kN — กิโลนิวตัน [Force]' },
+    { value: 'kgf',      label: 'kgf — กก.แรง [Force]' },
+    { value: 'mnm',      label: 'mN·m — มิลลินิวตันเมตร [Torque]' },
+    // Viscosity
+    { value: 'cps',      label: 'cps — เซนติพอยส์ [Viscosity]' },
+    { value: 'mpas',     label: 'mPa·s — มิลลิปาสคาล-วินาที [Viscosity]' },
+    { value: 'pas',      label: 'Pa·s — ปาสคาล-วินาที [Viscosity]' },
+    // Speed
+    { value: 'rpm',      label: 'rpm — รอบ/นาที [Speed]' },
+    { value: 'hz',       label: 'Hz — เฮิรตซ์ [Frequency]' },
+    { value: 'ms_speed', label: 'm/s — เมตร/วินาที [Speed]' },
+    { value: 'l_min',    label: 'L/min — ลิตร/นาที [Flow rate]' },
+    // Microbial
+    { value: 'cfu_g',    label: 'cfu/g — โคโลนี/กรัม [Microbial]' },
+    { value: 'cfu_ml',   label: 'cfu/ml — โคโลนี/มล. [Microbial]' },
+    { value: 'log10',    label: 'log10 — ลอการิทึมฐาน 10 [Microbial]' },
+    // Specific physical/chemical
+    { value: 'ph',       label: 'pH — กรด-ด่าง [Property]' },
+    { value: 'brix',     label: '°Brix — น้ำตาล [Property]' },
+    { value: 'ntu',      label: 'NTU — ความขุ่น [Property]' },
+    { value: 'us_cm',    label: 'µS/cm — การนำไฟฟ้า [Property]' },
+    { value: 'ms_cm',    label: 'mS/cm — การนำไฟฟ้า [Property]' },
+    { value: 'rh',       label: '%RH — ความชื้นสัมพัทธ์ [Property]' },
+    // Energy/Power
+    { value: 'w',        label: 'W — วัตต์ [Power]' },
+    { value: 'kw',       label: 'kW — กิโลวัตต์ [Power]' },
+    { value: 'j',        label: 'J — จูล [Energy]' },
+    // Count
+    { value: 'count',    label: 'count — จำนวน (เม็ด/ชิ้น)' },
+    { value: 'tablets',  label: 'tablets — เม็ด' },
+    { value: 'capsules', label: 'capsules — แคปซูล' },
+  ]);
+
+  const addUnit = ({ symbol, description, category }) => {
+    const cat = category ? ` [${category}]` : '';
+    const desc = description ? ` — ${description}` : '';
+    const newOpt = { value: `custom_${Date.now()}`, label: `${symbol}${desc}${cat}`, custom: true };
+    setUnits(prev => [...prev, newOpt]);
+    set('unit', newOpt.value);
+  };
 
   const [dosageForms, setDosageForms] = useState([
     { value: 'tablet', label: 'Tablet — ยาเม็ด' },
@@ -643,6 +858,7 @@ function App() {
     { value: 'pass_fail', label: 'Pass/Fail — ผ่าน/ไม่ผ่าน' },
     { value: 'visual', label: 'Visual — ตรวจด้วยสายตา' },
     { value: 'text', label: 'Text — บันทึกข้อความ' },
+    { value: 'custom', label: 'Custom Multi-Field — กำหนดฟิลด์เอง (เช่น หัวตอกเครื่อง, calibration)' },
   ];
 
   const [testNames, setTestNames] = useState([
@@ -674,31 +890,31 @@ function App() {
   ]);
 
   const testMetadata = {
-    weight:             { prefix: 'WV', unit: 'mg',      stages: [{id:1,sampleSize:'10',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'20',failureTolerance:'10',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
-    hardness:           { prefix: 'HD', unit: 'n',       stages: [{id:1,sampleSize:'10',failureTolerance:'10',onFail:'reject'}], critical: false, target: '', tolerance: '20' },
-    friability:         { prefix: 'FR', unit: 'percent', stages: [{id:1,sampleSize:'10',failureTolerance:'0',onFail:'reject'}], critical: false, target: '0.8', tolerance: '0' },
-    thickness:          { prefix: 'TH', unit: 'mm',      stages: [{id:1,sampleSize:'10',failureTolerance:'5',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
-    diameter:           { prefix: 'DM', unit: 'mm',      stages: [{id:1,sampleSize:'10',failureTolerance:'5',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
-    disintegration:     { prefix: 'DT', unit: 'min',     stages: [{id:1,sampleSize:'6',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'12',failureTolerance:'0',onFail:'reject'}], critical: true, target: '15', tolerance: '0' },
-    dissolution:        { prefix: 'DS', unit: 'percent', stages: [{id:1,sampleSize:'6',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'6',failureTolerance:'0',onFail:'next'},{id:3,sampleSize:'12',failureTolerance:'8',onFail:'reject'}], critical: true, target: '85', tolerance: '5' },
-    moisture:           { prefix: 'MC', unit: 'percent', stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
-    appearance:         { prefix: 'AP', unit: '',        stages: [{id:1,sampleSize:'20',failureTolerance:'5',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
-    color:              { prefix: 'CL', unit: '',        stages: [{id:1,sampleSize:'20',failureTolerance:'5',onFail:'deviation'}], critical: false, target: '', tolerance: '0' },
-    ph:                 { prefix: 'PH', unit: 'ph',      stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
-    viscosity:          { prefix: 'VS', unit: 'cps',     stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'deviation'}], critical: false, target: '', tolerance: '10' },
-    specific_gravity:   { prefix: 'SG', unit: '',        stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '2' },
-    identification:     { prefix: 'ID', unit: '',        stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
-    assay:              { prefix: 'AS', unit: 'percent', stages: [{id:1,sampleSize:'10',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'20',failureTolerance:'5',onFail:'reject'}], critical: true, target: '100', tolerance: '5' },
-    related_substances: { prefix: 'RS', unit: 'percent', stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
-    microbial:          { prefix: 'MB', unit: 'count',   stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
-    yeast_mold:         { prefix: 'YM', unit: 'count',   stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
-    sterility:          { prefix: 'ST', unit: '',        stages: [{id:1,sampleSize:'20',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
-    foreign_matter:     { prefix: 'FM', unit: 'percent', stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
-    total_ash:          { prefix: 'TA', unit: 'percent', stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
-    acid_insoluble_ash: { prefix: 'AIA',unit: 'percent', stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
-    heavy_metals:       { prefix: 'HM', unit: 'ppm',     stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
-    pesticide:          { prefix: 'PR', unit: 'ppm',     stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
-    aflatoxin:          { prefix: 'AF', unit: 'ppm',     stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    weight:             { prefix: 'WV', unit: 'mg',      samplingMethod: 'random',               stages: [{id:1,sampleSize:'10',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'20',failureTolerance:'10',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
+    hardness:           { prefix: 'HD', unit: 'n',       samplingMethod: 'random',               stages: [{id:1,sampleSize:'10',failureTolerance:'10',onFail:'reject'}], critical: false, target: '', tolerance: '20' },
+    friability:         { prefix: 'FR', unit: 'percent', samplingMethod: 'random',               stages: [{id:1,sampleSize:'10',failureTolerance:'0',onFail:'reject'}], critical: false, target: '0.8', tolerance: '0' },
+    thickness:          { prefix: 'TH', unit: 'mm',      samplingMethod: 'random',               stages: [{id:1,sampleSize:'10',failureTolerance:'5',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
+    diameter:           { prefix: 'DM', unit: 'mm',      samplingMethod: 'random',               stages: [{id:1,sampleSize:'10',failureTolerance:'5',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
+    disintegration:     { prefix: 'DT', unit: 'min',     samplingMethod: 'random',               stages: [{id:1,sampleSize:'6',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'12',failureTolerance:'0',onFail:'reject'}], critical: true, target: '15', tolerance: '0' },
+    dissolution:        { prefix: 'DS', unit: 'percent', samplingMethod: 'random',               stages: [{id:1,sampleSize:'6',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'6',failureTolerance:'0',onFail:'next'},{id:3,sampleSize:'12',failureTolerance:'8',onFail:'reject'}], critical: true, target: '85', tolerance: '5' },
+    moisture:           { prefix: 'MC', unit: 'percent', samplingMethod: 'composite',            stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
+    appearance:         { prefix: 'AP', unit: '',        samplingMethod: 'stratified',           stages: [{id:1,sampleSize:'20',failureTolerance:'5',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
+    color:              { prefix: 'CL', unit: '',        samplingMethod: 'stratified',           stages: [{id:1,sampleSize:'20',failureTolerance:'5',onFail:'deviation'}], critical: false, target: '', tolerance: '0' },
+    ph:                 { prefix: 'PH', unit: 'ph',      samplingMethod: 'composite',            stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '5' },
+    viscosity:          { prefix: 'VS', unit: 'cps',     samplingMethod: 'composite',            stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'deviation'}], critical: false, target: '', tolerance: '10' },
+    specific_gravity:   { prefix: 'SG', unit: '',        samplingMethod: 'composite',            stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '2' },
+    identification:     { prefix: 'ID', unit: '',        samplingMethod: 'composite',            stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    assay:              { prefix: 'AS', unit: 'percent', samplingMethod: 'composite',            stages: [{id:1,sampleSize:'10',failureTolerance:'0',onFail:'next'},{id:2,sampleSize:'20',failureTolerance:'5',onFail:'reject'}], critical: true, target: '100', tolerance: '5' },
+    related_substances: { prefix: 'RS', unit: 'percent', samplingMethod: 'composite',            stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    microbial:          { prefix: 'MB', unit: 'count',   samplingMethod: 'multi_site_composite', stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    yeast_mold:         { prefix: 'YM', unit: 'count',   samplingMethod: 'multi_site_composite', stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    sterility:          { prefix: 'ST', unit: '',        samplingMethod: 'square_root',          stages: [{id:1,sampleSize:'20',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    foreign_matter:     { prefix: 'FM', unit: 'percent', samplingMethod: 'stratified',           stages: [{id:1,sampleSize:'1',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
+    total_ash:          { prefix: 'TA', unit: 'percent', samplingMethod: 'composite',            stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
+    acid_insoluble_ash: { prefix: 'AIA',unit: 'percent', samplingMethod: 'composite',            stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: false, target: '', tolerance: '0' },
+    heavy_metals:       { prefix: 'HM', unit: 'ppm',     samplingMethod: 'multi_site_composite', stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    pesticide:          { prefix: 'PR', unit: 'ppm',     samplingMethod: 'multi_site_composite', stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
+    aflatoxin:          { prefix: 'AF', unit: 'ppm',     samplingMethod: 'multi_site_composite', stages: [{id:1,sampleSize:'3',failureTolerance:'0',onFail:'reject'}], critical: true, target: '', tolerance: '0' },
   };
 
   const [autoFilled, setAutoFilled] = useState(new Set());
@@ -717,6 +933,10 @@ function App() {
         if (meta.unit && (!prev.unit || autoFilled.has('unit'))) {
           updates.unit = meta.unit;
           filled.push('unit');
+        }
+        if (meta.samplingMethod) {
+          updates.samplingMethod = meta.samplingMethod;
+          filled.push('samplingMethod');
         }
         if (meta.stages) {
           updates.stages = meta.stages;
@@ -744,7 +964,99 @@ function App() {
 
   const selectedTestLabel = testNames.find(t => t.value === form.testName)?.label || '';
 
+  const toggleTrigger = (key) => setForm(p => ({
+    ...p, triggers: { ...p.triggers, [key]: { ...p.triggers[key], on: !p.triggers[key].on } }
+  }));
+  const updateTriggerField = (key, field, value) => setForm(p => ({
+    ...p, triggers: { ...p.triggers, [key]: { ...p.triggers[key], [field]: value } }
+  }));
+  const toggleTriggerOption = (key, optId) => setForm(p => ({
+    ...p,
+    triggers: {
+      ...p.triggers,
+      [key]: {
+        ...p.triggers[key],
+        options: p.triggers[key].options.map(o => o.id === optId ? { ...o, on: !o.on } : o)
+      }
+    }
+  }));
+  const addCustomOption = (key, label) => setForm(p => ({
+    ...p,
+    triggers: {
+      ...p.triggers,
+      [key]: {
+        ...p.triggers[key],
+        options: [...p.triggers[key].options, { id: `custom_${Date.now()}`, label, on: true, custom: true }]
+      }
+    }
+  }));
+  const removeCustomOption = (key, optId) => setForm(p => ({
+    ...p,
+    triggers: {
+      ...p.triggers,
+      [key]: {
+        ...p.triggers[key],
+        options: p.triggers[key].options.filter(o => o.id !== optId)
+      }
+    }
+  }));
+
+  // Estimated checks per batch (at reference batch size)
+  const batchEstimate = (() => {
+    const bsize = parseFloat(form.referenceBatchSize) || 0;
+    const dur   = parseFloat(form.referenceBatchDurationHr) || 0;
+    const t     = form.triggers;
+    const checks = { time: 0, quantity: 0, milestone: 0, event: 0, oncePerBatch: 0 };
+    if (t.time.on) {
+      const every = parseFloat(t.time.every) || 0;
+      if (every > 0 && dur > 0) checks.time = Math.floor((dur * 60) / every);
+    }
+    if (t.quantity.on) {
+      if (t.quantity.mode === 'percent') {
+        const p = parseFloat(t.quantity.percent) || 0;
+        if (p > 0) checks.quantity = Math.floor(100 / p);
+      } else {
+        const every = parseFloat(t.quantity.every) || 0;
+        if (every > 0 && bsize > 0) checks.quantity = Math.floor(bsize / every);
+      }
+    }
+    if (t.milestone.on) checks.milestone = t.milestone.options.filter(o => o.on).length;
+    if (t.event.on) checks.event = t.event.options.filter(o => o.on).length;
+    if (t.oncePerBatch.on) checks.oncePerBatch = 1;
+    const minTotal = checks.time + checks.quantity + checks.milestone + checks.oncePerBatch;
+    const maxTotal = minTotal + checks.event;
+    const samplesUsed = form.stages.reduce((s, st) => s + (parseInt(st.sampleSize) || 0), 0);
+    const samplesTotal = samplesUsed * minTotal;
+    const samplesPct = bsize > 0 ? ((samplesTotal / bsize) * 100) : 0;
+    return { checks, minTotal, maxTotal, samplesPerCheck: samplesUsed, samplesTotal, samplesPct, batchSize: bsize };
+  })();
+
+  const triggerSummary = (() => {
+    const parts = [];
+    const t = form.triggers;
+    if (t.time.on) parts.push(`⏱ ทุก ${t.time.every} นาที`);
+    if (t.quantity.on) parts.push(`📦 ทุก ${t.quantity.every} ${t.quantity.unit}`);
+    if (t.milestone.on) {
+      const n = t.milestone.options.filter(o => o.on).length;
+      if (n) parts.push(`🎯 ${n} milestone${n>1?'s':''}`);
+    }
+    if (t.event.on) {
+      const n = t.event.options.filter(o => o.on).length;
+      if (n) parts.push(`⚡ ${n} event${n>1?'s':''}`);
+    }
+    if (t.oncePerBatch.on) parts.push(`✅ ครั้งเดียวต่อ batch`);
+    return parts;
+  })();
+
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // √n + 1 helper for batch sampling (per Pharmacopoeia)
+  const sqrtNplus1 = (n) => {
+    const num = parseFloat(n);
+    if (!num || num <= 0) return null;
+    return Math.ceil(Math.sqrt(num)) + 1;
+  };
+  const recommendedBatchSample = sqrtNplus1(form.referenceBatchSize);
 
   const addTestName = ({ name, thaiName, reference }) => {
     const parts = [name];
@@ -826,7 +1138,7 @@ function App() {
                   <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
                     <span className="text-base">⚡</span>
                     <span>เติมให้อัตโนมัติ:</span>
-                    <span className="font-semibold">{[...autoFilled].map(k => ({code:'Code',unit:'Unit',stages:'Sample Plan',target:'Target',tolerance:'Tolerance%',critical:'Critical'}[k])).filter(Boolean).join(' · ')}</span>
+                    <span className="font-semibold">{[...autoFilled].map(k => ({code:'Code',unit:'Unit',stages:'Sample Plan',target:'Target',tolerance:'Tolerance%',critical:'Critical',samplingMethod:'Sampling Method'}[k])).filter(Boolean).join(' · ')}</span>
                     <button type="button" onClick={() => setAutoFilled(new Set())}
                       className="ml-auto text-emerald-600 hover:text-emerald-800 text-[11px] underline">รับทราบ</button>
                   </div>
@@ -851,9 +1163,18 @@ function App() {
                   Unit
                   {autoFilled.has('unit') && <AutoBadge />}
                 </label>
-                <Select value={form.unit} onChange={v => set('unit', v)}
-                  options={units} placeholder="เลือกหน่วยวัด" />
-                <p className="helper">{autoFilled.has('unit') ? 'แนะนำตาม Test Name — เปลี่ยนได้' : 'หน่วยวัดของค่าที่บันทึก'}</p>
+                <EditableSelect value={form.unit}
+                  onChange={v => { set('unit', v); if (autoFilled.has('unit')) { const s = new Set(autoFilled); s.delete('unit'); setAutoFilled(s); } }}
+                  options={units}
+                  onAdd={addUnit}
+                  placeholder="เลือกหน่วยวัด หรือสร้างใหม่"
+                  modalTitle="เพิ่มหน่วยวัดใหม่"
+                  modalFields={[
+                    { key: 'symbol', label: 'สัญลักษณ์หน่วย', placeholder: 'เช่น mg/cm², kg·m, µS', required: true },
+                    { key: 'description', label: 'คำอธิบาย (ไทย)', placeholder: 'เช่น มิลลิกรัมต่อตารางเซนติเมตร', required: false },
+                    { key: 'category', label: 'หมวดหมู่', placeholder: 'เช่น Mass, Pressure, Concentration', required: false, helper: 'ช่วยให้ค้นหาได้ง่ายขึ้น' },
+                  ]} />
+                <p className="helper">{autoFilled.has('unit') ? 'แนะนำตาม Test Name — เปลี่ยนได้' : `${units.length} หน่วยมาตรฐาน หรือเพิ่มใหม่ที่ปลาย dropdown`}</p>
               </div>
 
               <div>
@@ -1067,6 +1388,139 @@ function App() {
                 </div>
               )}
 
+              {/* === CUSTOM MULTI-FIELD === */}
+              {form.criteriaType === 'custom' && (
+                <div className="col-span-2 p-5 mt-2 rounded-xl border-2 border-dashed border-violet-200 bg-violet-50/40">
+                  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Icon name="cog" className="w-4 h-4 text-violet-700" />
+                      <h3 className="font-semibold text-violet-800 text-sm">ฟิลด์ที่ต้องบันทึก (Custom Multi-Field)</h3>
+                    </div>
+                    <span className="text-[11px] text-violet-700 bg-white/60 px-2 py-0.5 rounded-full border border-violet-200">
+                      {form.customFields.length} ฟิลด์
+                    </span>
+                  </div>
+
+                  <div className="bg-white rounded-lg border border-violet-200 p-2.5 mb-3 text-[11px] text-violet-900 flex items-start gap-2">
+                    <span>💡</span>
+                    <div>
+                      <strong>ตัวอย่างการใช้งาน:</strong>
+                      <ul className="list-disc list-inside mt-0.5 text-violet-800/90 space-y-0.5">
+                        <li>น้ำหนักแคปซูลเปล่า → 1 ฟิลด์ Number "น้ำหนัก" + 1 Pass/Fail "สีถูกต้อง"</li>
+                        <li>Balance Calibration → "นน. มาตรฐาน", "นน. ที่ชั่งได้", "เบี่ยงเบน"</li>
+                        <li>หัวตอกเครื่องบรรจุแคปซูล → ใช้ "สร้างชุดฟิลด์" สร้าง Punch 1-30 อัตโนมัติ</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-3">
+                    {form.customFields.map((field, idx) => (
+                      <div key={field.id} className="rounded-xl bg-white border border-violet-200 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-6 h-6 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center text-[11px] font-bold flex-shrink-0">{idx + 1}</span>
+                          <input className="field-input flex-1 text-sm font-medium"
+                            placeholder="ชื่อฟิลด์ เช่น น้ำหนัก, Punch 1, สี"
+                            value={field.label}
+                            onChange={e => updateCustomField(field.id, 'label', e.target.value)} />
+                          <select className="field-input w-28 text-sm cursor-pointer"
+                            value={field.type}
+                            onChange={e => updateCustomField(field.id, 'type', e.target.value)}>
+                            <option value="number">🔢 Number</option>
+                            <option value="text">📝 Text</option>
+                            <option value="pass_fail">✓ Pass/Fail</option>
+                            <option value="visual">👁 Visual</option>
+                          </select>
+                          {form.customFields.length > 1 && (
+                            <button type="button"
+                              onClick={() => removeCustomField(field.id)}
+                              className="p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50">
+                              <Icon name="trash" className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        {field.type === 'number' && (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 ml-8">
+                            <div>
+                              <label className="text-[10px] text-slate-500 uppercase">หน่วย</label>
+                              <input className="field-input text-xs" placeholder="mg, mm, g"
+                                value={field.unit}
+                                onChange={e => updateCustomField(field.id, 'unit', e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-slate-500 uppercase">Target</label>
+                              <input className="field-input text-xs" type="number" placeholder="—"
+                                value={field.target}
+                                onChange={e => updateCustomField(field.id, 'target', e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-slate-500 uppercase">Tolerance %</label>
+                              <input className="field-input text-xs" type="number" placeholder="0"
+                                value={field.tolerance}
+                                onChange={e => updateCustomField(field.id, 'tolerance', e.target.value)} />
+                            </div>
+                            <div className="flex items-end pb-0.5">
+                              <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                                <input type="checkbox" className="w-3.5 h-3.5 rounded accent-violet-600"
+                                  checked={field.required}
+                                  onChange={e => updateCustomField(field.id, 'required', e.target.checked)} />
+                                <span className="text-slate-600">Required</span>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+
+                        {field.type === 'text' && (
+                          <div className="ml-8 flex items-center gap-3">
+                            <input className="field-input text-xs flex-1" placeholder="ตัวอย่าง / รูปแบบ"
+                              value={field.note}
+                              onChange={e => updateCustomField(field.id, 'note', e.target.value)} />
+                            <label className="flex items-center gap-1.5 cursor-pointer text-xs whitespace-nowrap">
+                              <input type="checkbox" className="w-3.5 h-3.5 rounded accent-violet-600"
+                                checked={field.required}
+                                onChange={e => updateCustomField(field.id, 'required', e.target.checked)} />
+                              <span className="text-slate-600">Required</span>
+                            </label>
+                          </div>
+                        )}
+
+                        {(field.type === 'pass_fail' || field.type === 'visual') && (
+                          <div className="ml-8 flex items-center gap-3">
+                            <input className="field-input text-xs flex-1"
+                              placeholder={field.type === 'pass_fail' ? 'เกณฑ์ผ่าน (ถ้ามี)' : 'จุดตรวจ (ถ้ามี)'}
+                              value={field.note}
+                              onChange={e => updateCustomField(field.id, 'note', e.target.value)} />
+                            <label className="flex items-center gap-1.5 cursor-pointer text-xs whitespace-nowrap">
+                              <input type="checkbox" className="w-3.5 h-3.5 rounded accent-violet-600"
+                                checked={field.required}
+                                onChange={e => updateCustomField(field.id, 'required', e.target.checked)} />
+                              <span className="text-slate-600">Required</span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button"
+                      onClick={() => addCustomField()}
+                      className="px-3 py-2 rounded-lg bg-white border border-violet-300 text-violet-700 hover:bg-violet-50 text-xs font-medium flex items-center gap-1">
+                      <Icon name="plus" className="w-3.5 h-3.5" /> เพิ่มฟิลด์
+                    </button>
+                    <BulkGenerateInline onGenerate={bulkGenerateFields} />
+                  </div>
+
+                  <div className="mt-3">
+                    <label className="field-label">หมายเหตุ / Note (Optional)</label>
+                    <input className="field-input"
+                      placeholder="เช่น ใช้กับเครื่อง Capsule Filler รุ่น XYZ"
+                      value={form.customNote}
+                      onChange={e => set('customNote', e.target.value)} />
+                  </div>
+                </div>
+              )}
+
               {/* === TEXT === */}
               {form.criteriaType === 'text' && (
                 <div className="col-span-2 p-5 mt-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
@@ -1107,55 +1561,388 @@ function App() {
 
               {/* Sub-panel: Sampling Plan */}
               <div className="col-span-2 sub-panel p-5">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Icon name="dice" className="w-4 h-4 text-emerald-700" />
                     <h3 className="font-semibold text-emerald-800 text-sm">Sampling Plan</h3>
                   </div>
-                  <span className="chip text-[11px]">GMP / USP Standard</span>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-[10px] font-mono font-medium bg-white text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded">PIC/S Annex 8</span>
+                    <span className="text-[10px] font-mono font-medium bg-white text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded">WHO TRS 957</span>
+                    <span className="text-[10px] font-mono font-medium bg-white text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded">ISO 2859-1</span>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                  <div>
-                    <label className="field-label">Sampling Method</label>
-                    <EditableSelect value={form.samplingMethod}
-                      onChange={v => set('samplingMethod', v)}
-                      options={samplingMethods}
-                      onAdd={addSamplingMethod}
-                      placeholder="เลือกวิธีสุ่ม"
-                      modalTitle="เพิ่มวิธีสุ่มตัวอย่าง"
-                      modalFields={[
-                        { key: 'name', label: 'ชื่อวิธีสุ่ม', placeholder: 'เช่น Cone & Quartering', required: true },
-                        { key: 'description', label: 'คำอธิบาย', placeholder: 'เช่น แบ่งกองวัตถุดิบเป็น 4 ส่วน เลือกสุ่ม', type: 'textarea', required: false, helper: 'อธิบายให้ operator เข้าใจวิธีปฏิบัติ' },
-                      ]} />
-                    <p className="helper">เลือกตัวเลือก หรือเลื่อนลงเพื่อเพิ่มใหม่</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                    <div>
+                      <label className="field-label flex items-center">
+                        Sampling Method
+                        {autoFilled.has('samplingMethod') && <AutoBadge />}
+                      </label>
+                      <EditableSelect value={form.samplingMethod}
+                        onChange={v => { set('samplingMethod', v); if (autoFilled.has('samplingMethod')) { const s = new Set(autoFilled); s.delete('samplingMethod'); setAutoFilled(s); } }}
+                        options={samplingMethods}
+                        onAdd={addSamplingMethod}
+                        placeholder="เลือกวิธีสุ่ม"
+                        modalTitle="เพิ่มวิธีสุ่มตัวอย่าง"
+                        modalFields={[
+                          { key: 'name', label: 'ชื่อวิธีสุ่ม', placeholder: 'เช่น Cone & Quartering', required: true },
+                          { key: 'description', label: 'คำอธิบาย', placeholder: 'เช่น แบ่งกองวัตถุดิบเป็น 4 ส่วน เลือกสุ่ม', type: 'textarea', required: false, helper: 'อธิบายให้ operator เข้าใจวิธีปฏิบัติ' },
+                        ]} />
+                      <p className="helper">{autoFilled.has('samplingMethod') ? 'แนะนำตาม Test Name — เปลี่ยนได้' : 'เลือกตัวเลือก หรือเลื่อนลงเพื่อเพิ่มใหม่'}</p>
+                    </div>
+                    <div>
+                      <label className="field-label">Sampling Note (Optional)</label>
+                      <input className="field-input"
+                        placeholder="เช่น สุ่ม 3 จุดต่อ batch: ต้น/กลาง/ปลาย"
+                        value={form.samplingNote} onChange={e => set('samplingNote', e.target.value)} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="field-label">Check Interval (min)</label>
-                    <input className="field-input" type="number"
-                      value={form.checkInterval} onChange={e => set('checkInterval', e.target.value)} />
-                    <p className="helper">ความถี่ในการเก็บตัวอย่าง</p>
+
+                  {/* === Reference Batch Size === */}
+                  <div className="mt-4 pt-4 border-t border-emerald-200/60">
+                    <div className="rounded-xl bg-white border-2 border-dashed border-emerald-300 p-3 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">🏭</span>
+                        <h4 className="font-semibold text-slate-900 text-sm">Reference Batch Size <span className="text-[11px] font-normal text-slate-500">(สำหรับ preview เท่านั้น)</span></h4>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap text-sm text-slate-700">
+                        <span>ขนาด batch ตัวอย่าง</span>
+                        <input type="number" className="field-input w-28 text-center font-semibold"
+                          value={form.referenceBatchSize}
+                          onChange={e => set('referenceBatchSize', e.target.value)} />
+                        <select className="field-input w-28 cursor-pointer"
+                          value={form.referenceBatchUnit}
+                          onChange={e => set('referenceBatchUnit', e.target.value)}>
+                          <option value="tablets">เม็ด</option>
+                          <option value="capsules">แคปซูล</option>
+                          <option value="bottles">ขวด</option>
+                          <option value="kg">กิโลกรัม</option>
+                          <option value="g">กรัม</option>
+                          <option value="units">units</option>
+                        </select>
+                        <span className="ml-2">· ใช้เวลาผลิต</span>
+                        <input type="number" className="field-input w-16 text-center font-semibold"
+                          value={form.referenceBatchDurationHr}
+                          onChange={e => set('referenceBatchDurationHr', e.target.value)} />
+                        <span>ชม.</span>
+                      </div>
+                      <p className="helper mt-2 text-[11px]">ⓘ ค่าจริงจะใช้จาก Work Order ตอนผลิต — ค่านี้ใช้เพื่อ preview/validation เท่านั้น</p>
+
+                      {form.samplingMethod === 'square_root' && recommendedBatchSample !== null && (
+                        <div className="mt-3 pt-3 border-t border-emerald-100">
+                          <div className="flex items-center gap-2 flex-wrap text-[11px] mb-2">
+                            <span className="text-[10px] font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded">European Ph.</span>
+                            <span className="text-slate-600">Sampling Method = √n + 1 → คำนวณตัวอย่างที่ต้องสุ่ม:</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-emerald-800 text-sm">√{parseFloat(form.referenceBatchSize).toLocaleString()} + 1 ≈ <span className="font-mono text-base">{recommendedBatchSample}</span> ตัวอย่าง</span>
+                            <span className="text-slate-400 text-[10px]">(per PIC/S Annex 8)</span>
+                          </div>
+                          {form.stages[0] && parseInt(form.stages[0].sampleSize) !== recommendedBatchSample && (
+                            <div className="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
+                              <span>⚠</span>
+                              <div>
+                                <strong>Sample Size ของ Stage 1 ไม่ตรงกับสูตร √n + 1</strong><br />
+                                ปัจจุบัน: <span className="font-mono font-bold">{form.stages[0].sampleSize}</span> · แนะนำ: <span className="font-mono font-bold">{recommendedBatchSample}</span>
+                                <button type="button"
+                                  onClick={() => updateStage(1, 'sampleSize', String(recommendedBatchSample))}
+                                  className="ml-2 underline font-semibold hover:text-amber-900">ปรับให้</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="col-span-2">
-                    <label className="field-label">Sampling Note (Optional)</label>
-                    <input className="field-input"
-                      placeholder="เช่น สุ่ม 3 จุดต่อ batch: ต้น/กลาง/ปลาย"
-                      value={form.samplingNote} onChange={e => set('samplingNote', e.target.value)} />
+
+                  {/* === Multi-Trigger Inspector === */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🔬</span>
+                        <h4 className="font-semibold text-emerald-800 text-sm">ตรวจสอบเมื่อ <span className="text-[11px] font-normal text-slate-500">— เลือกได้หลายแบบ</span></h4>
+                      </div>
+                      <span className="text-[11px] text-emerald-700 bg-white/60 px-2 py-0.5 rounded-full border border-emerald-200">
+                        เปิด {[form.triggers.time.on, form.triggers.quantity.on, form.triggers.milestone.on, form.triggers.event.on, form.triggers.oncePerBatch.on].filter(Boolean).length} / 5
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* TIME */}
+                      <div className={`rounded-xl border transition-all overflow-hidden ${form.triggers.time.on ? 'bg-white border-emerald-300 shadow-sm' : 'bg-white/60 border-slate-200'}`}>
+                        <div className="flex items-center gap-3 p-3 cursor-pointer select-none"
+                          onClick={() => toggleTrigger('time')}>
+                          <Toggle value={form.triggers.time.on} onChange={() => {}} label="" />
+                          <span className="text-xl">⏱</span>
+                          <div className="flex-1">
+                            <div className={`text-sm font-semibold ${form.triggers.time.on ? 'text-slate-900' : 'text-slate-500'}`}>ตามช่วงเวลา</div>
+                            <div className="text-[11px] text-slate-500">Time-based · เหมาะกับ Granulation, Mixing, Coating</div>
+                          </div>
+                        </div>
+                        {form.triggers.time.on && (
+                          <div className="px-4 pb-3 pl-14">
+                            <div className="flex items-center gap-2 text-sm text-slate-700">
+                              <span>ทุก</span>
+                              <input type="number" min="1"
+                                className="field-input w-24 text-center font-semibold"
+                                value={form.triggers.time.every}
+                                onChange={e => updateTriggerField('time', 'every', e.target.value)}
+                                onClick={e => e.stopPropagation()} />
+                              <span>นาที</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* QUANTITY */}
+                      <div className={`rounded-xl border transition-all overflow-hidden ${form.triggers.quantity.on ? 'bg-white border-emerald-300 shadow-sm' : 'bg-white/60 border-slate-200'}`}>
+                        <div className="flex items-center gap-3 p-3 cursor-pointer select-none"
+                          onClick={() => toggleTrigger('quantity')}>
+                          <Toggle value={form.triggers.quantity.on} onChange={() => {}} label="" />
+                          <span className="text-xl">📦</span>
+                          <div className="flex-1">
+                            <div className={`text-sm font-semibold ${form.triggers.quantity.on ? 'text-slate-900' : 'text-slate-500'}`}>ตามจำนวนผลิต</div>
+                            <div className="text-[11px] text-slate-500">Quantity-based · เหมาะกับ Tablet Press, Encapsulation</div>
+                          </div>
+                        </div>
+                        {form.triggers.quantity.on && (
+                          <div className="px-4 pb-3 pl-14 space-y-2" onClick={e => e.stopPropagation()}>
+                            <div className="flex gap-1.5">
+                              <button type="button"
+                                onClick={() => updateTriggerField('quantity', 'mode', 'fixed')}
+                                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                  form.triggers.quantity.mode === 'fixed'
+                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                                    : 'bg-white border-slate-200 text-slate-500'
+                                }`}>🔢 จำนวนคงที่</button>
+                              <button type="button"
+                                onClick={() => updateTriggerField('quantity', 'mode', 'percent')}
+                                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                  form.triggers.quantity.mode === 'percent'
+                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                                    : 'bg-white border-slate-200 text-slate-500'
+                                }`}>% ของ batch</button>
+                            </div>
+                            {form.triggers.quantity.mode === 'fixed' ? (
+                              <div className="flex items-center gap-2 text-sm text-slate-700 flex-wrap">
+                                <span>ทุก</span>
+                                <input type="number" min="1"
+                                  className="field-input w-28 text-center font-semibold"
+                                  value={form.triggers.quantity.every}
+                                  onChange={e => updateTriggerField('quantity', 'every', e.target.value)} />
+                                <select className="field-input w-32 cursor-pointer"
+                                  value={form.triggers.quantity.unit}
+                                  onChange={e => updateTriggerField('quantity', 'unit', e.target.value)}>
+                                  <option value="tablets">เม็ด</option>
+                                  <option value="capsules">แคปซูล</option>
+                                  <option value="bottles">ขวด</option>
+                                  <option value="kg">กิโลกรัม</option>
+                                  <option value="g">กรัม</option>
+                                  <option value="units">units</option>
+                                </select>
+                                {batchEstimate.batchSize > 0 && (
+                                  <span className="text-[11px] text-emerald-700">→ ~{batchEstimate.checks.quantity} ครั้ง/batch</span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-sm text-slate-700 flex-wrap">
+                                <span>ทุก</span>
+                                <div className="relative">
+                                  <input type="number" min="1" max="100" step="0.1"
+                                    className="field-input w-24 text-center font-semibold pr-7"
+                                    value={form.triggers.quantity.percent}
+                                    onChange={e => updateTriggerField('quantity', 'percent', e.target.value)} />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+                                </div>
+                                <span>ของ batch</span>
+                                {batchEstimate.batchSize > 0 && (
+                                  <span className="text-[11px] text-emerald-700">→ ~{batchEstimate.checks.quantity} ครั้ง/batch · ทุก {Math.floor(batchEstimate.batchSize * (parseFloat(form.triggers.quantity.percent) || 0) / 100).toLocaleString()} {form.referenceBatchUnit}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* MILESTONE */}
+                      <div className={`rounded-xl border transition-all overflow-hidden ${form.triggers.milestone.on ? 'bg-white border-emerald-300 shadow-sm' : 'bg-white/60 border-slate-200'}`}>
+                        <div className="flex items-center gap-3 p-3 cursor-pointer select-none"
+                          onClick={() => toggleTrigger('milestone')}>
+                          <Toggle value={form.triggers.milestone.on} onChange={() => {}} label="" />
+                          <span className="text-xl">🎯</span>
+                          <div className="flex-1">
+                            <div className={`text-sm font-semibold ${form.triggers.milestone.on ? 'text-slate-900' : 'text-slate-500'}`}>ที่ milestone ของกระบวนการ</div>
+                            <div className="text-[11px] text-slate-500">Milestone · เหมาะกับ stage-by-stage process</div>
+                          </div>
+                        </div>
+                        {form.triggers.milestone.on && (
+                          <div className="px-4 pb-3 pl-14 space-y-1.5" onClick={e => e.stopPropagation()}>
+                            {form.triggers.milestone.options.map(opt => (
+                              <label key={opt.id} className="flex items-center gap-2.5 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input type="checkbox" className="w-4 h-4 rounded accent-emerald-600"
+                                  checked={opt.on}
+                                  onChange={() => toggleTriggerOption('milestone', opt.id)} />
+                                <span className={`text-sm ${opt.on ? 'text-slate-900 font-medium' : 'text-slate-600'}`}>{opt.label}</span>
+                                {opt.custom && <span className="text-[10px] text-emerald-600">✨</span>}
+                                {opt.custom && (
+                                  <button type="button" onClick={() => removeCustomOption('milestone', opt.id)}
+                                    className="ml-auto text-slate-400 hover:text-red-500 p-0.5">
+                                    <Icon name="trash" className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </label>
+                            ))}
+                            <CustomOptionAdder onAdd={label => addCustomOption('milestone', label)} placeholder="เช่น หลัง drying" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* EVENT */}
+                      <div className={`rounded-xl border transition-all overflow-hidden ${form.triggers.event.on ? 'bg-white border-emerald-300 shadow-sm' : 'bg-white/60 border-slate-200'}`}>
+                        <div className="flex items-center gap-3 p-3 cursor-pointer select-none"
+                          onClick={() => toggleTrigger('event')}>
+                          <Toggle value={form.triggers.event.on} onChange={() => {}} label="" />
+                          <span className="text-xl">⚡</span>
+                          <div className="flex-1">
+                            <div className={`text-sm font-semibold ${form.triggers.event.on ? 'text-slate-900' : 'text-slate-500'}`}>เมื่อมีเหตุการณ์</div>
+                            <div className="text-[11px] text-slate-500">Event-triggered · เหมาะกับ Changeover, Cleaning, Maintenance</div>
+                          </div>
+                        </div>
+                        {form.triggers.event.on && (
+                          <div className="px-4 pb-3 pl-14 space-y-1.5" onClick={e => e.stopPropagation()}>
+                            {form.triggers.event.options.map(opt => (
+                              <label key={opt.id} className="flex items-center gap-2.5 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                                <input type="checkbox" className="w-4 h-4 rounded accent-emerald-600"
+                                  checked={opt.on}
+                                  onChange={() => toggleTriggerOption('event', opt.id)} />
+                                <span className={`text-sm ${opt.on ? 'text-slate-900 font-medium' : 'text-slate-600'}`}>{opt.label}</span>
+                                {opt.custom && <span className="text-[10px] text-emerald-600">✨</span>}
+                                {opt.custom && (
+                                  <button type="button" onClick={() => removeCustomOption('event', opt.id)}
+                                    className="ml-auto text-slate-400 hover:text-red-500 p-0.5">
+                                    <Icon name="trash" className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </label>
+                            ))}
+                            <CustomOptionAdder onAdd={label => addCustomOption('event', label)} placeholder="เช่น หลัง calibration" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ONCE PER BATCH */}
+                      <div className={`rounded-xl border transition-all overflow-hidden ${form.triggers.oncePerBatch.on ? 'bg-white border-emerald-300 shadow-sm' : 'bg-white/60 border-slate-200'}`}>
+                        <div className="flex items-center gap-3 p-3 cursor-pointer select-none"
+                          onClick={() => toggleTrigger('oncePerBatch')}>
+                          <Toggle value={form.triggers.oncePerBatch.on} onChange={() => {}} label="" />
+                          <span className="text-xl">✅</span>
+                          <div className="flex-1">
+                            <div className={`text-sm font-semibold ${form.triggers.oncePerBatch.on ? 'text-slate-900' : 'text-slate-500'}`}>ครั้งเดียวต่อ batch</div>
+                            <div className="text-[11px] text-slate-500">Per-batch · เหมาะกับ Lab tests (Assay, Identification)</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Summary + Batch impact */}
+                    {triggerSummary.length > 0 ? (
+                      <div className="mt-3 rounded-xl bg-white border border-emerald-200 overflow-hidden">
+                        <div className="px-3 py-2.5 border-b border-emerald-100 text-xs">
+                          <span className="text-slate-500 mr-1">สรุป:</span>
+                          {triggerSummary.map((s, i) => (
+                            <span key={i} className="inline-block mr-2 font-medium text-emerald-800">{s}{i < triggerSummary.length - 1 && <span className="text-slate-300 ml-2">·</span>}</span>
+                          ))}
+                        </div>
+                        {batchEstimate.batchSize > 0 && (
+                          <div className="px-3 py-3 bg-gradient-to-br from-emerald-50/50 to-white">
+                            <div className="flex items-center gap-2 mb-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wide">
+                              <span>📊</span>
+                              <span>ประมาณการที่ batch size {parseFloat(form.referenceBatchSize).toLocaleString()} {form.referenceBatchUnit}</span>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                              <div className={`rounded-lg p-2 ${form.triggers.time.on ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200 opacity-50'}`}>
+                                <div className="text-[10px] text-slate-500">⏱ Time</div>
+                                <div className="text-base font-bold text-emerald-700">{batchEstimate.checks.time}</div>
+                              </div>
+                              <div className={`rounded-lg p-2 ${form.triggers.quantity.on ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200 opacity-50'}`}>
+                                <div className="text-[10px] text-slate-500">📦 Qty</div>
+                                <div className="text-base font-bold text-emerald-700">{batchEstimate.checks.quantity}</div>
+                              </div>
+                              <div className={`rounded-lg p-2 ${form.triggers.milestone.on ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200 opacity-50'}`}>
+                                <div className="text-[10px] text-slate-500">🎯 Milestone</div>
+                                <div className="text-base font-bold text-emerald-700">{batchEstimate.checks.milestone}</div>
+                              </div>
+                              <div className={`rounded-lg p-2 ${form.triggers.event.on ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50 border border-slate-200 opacity-50'}`}>
+                                <div className="text-[10px] text-slate-500">⚡ Event</div>
+                                <div className="text-base font-bold text-amber-700">0–{batchEstimate.checks.event}</div>
+                              </div>
+                              <div className={`rounded-lg p-2 ${form.triggers.oncePerBatch.on ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200 opacity-50'}`}>
+                                <div className="text-[10px] text-slate-500">✅ Per-batch</div>
+                                <div className="text-base font-bold text-emerald-700">{batchEstimate.checks.oncePerBatch}</div>
+                              </div>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-emerald-100 grid grid-cols-2 gap-3 text-xs">
+                              <div className="bg-white rounded-lg p-2.5 border border-emerald-200">
+                                <div className="text-[10px] text-slate-500 uppercase">รวมจำนวนตรวจ/batch</div>
+                                <div className="font-bold text-emerald-800 mt-0.5">
+                                  {batchEstimate.minTotal === batchEstimate.maxTotal
+                                    ? `~${batchEstimate.minTotal} ครั้ง`
+                                    : `${batchEstimate.minTotal}–${batchEstimate.maxTotal}+ ครั้ง`}
+                                </div>
+                              </div>
+                              <div className="bg-white rounded-lg p-2.5 border border-emerald-200">
+                                <div className="text-[10px] text-slate-500 uppercase">Samples ใช้รวม</div>
+                                <div className="font-bold text-emerald-800 mt-0.5">
+                                  {batchEstimate.samplesTotal.toLocaleString()} ชิ้น
+                                  <span className="ml-1 text-[10px] text-slate-500">({batchEstimate.samplesPct.toFixed(2)}% ของ batch)</span>
+                                </div>
+                              </div>
+                            </div>
+                            {batchEstimate.samplesPct > 5 && (
+                              <div className="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+                                ⚠ ใช้ตัวอย่างมากกว่า 5% ของ batch — อาจสูงเกินไป
+                              </div>
+                            )}
+                            {form.triggers.quantity.on && form.triggers.quantity.mode === 'fixed' && batchEstimate.checks.quantity === 0 && (
+                              <div className="mt-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-[11px] text-red-700">
+                                ⚠ Quantity trigger จะไม่ทำงาน — batch size ({parseFloat(form.referenceBatchSize).toLocaleString()}) น้อยกว่า frequency ({form.triggers.quantity.every})
+                              </div>
+                            )}
+                            {batchEstimate.minTotal === 0 && (
+                              <div className="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+                                ⚠ ไม่มี check ที่จะทำงานเลย — ลองเปิด trigger อื่นหรือใส่ค่าใหม่
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                        ⚠ ยังไม่ได้เลือก trigger — operator จะไม่ทราบว่าต้องตรวจตอนไหน
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Sub-panel: Multi-Stage Acceptance */}
               <div className="col-span-2 panel p-5 mt-2 border-emerald-200 border-2 border-dashed">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Icon name="layers" className="w-5 h-5 text-emerald-700" />
                     <div>
                       <h3 className="font-semibold text-slate-900 text-sm">Multi-Stage Acceptance Criteria</h3>
-                      <p className="text-xs text-slate-500">เกณฑ์การยอมรับแบบหลายขั้น (ตามหลัก GMP / USP &lt;711&gt;, &lt;905&gt;)</p>
+                      <p className="text-xs text-slate-500">เกณฑ์การยอมรับแบบหลายขั้น — Stage Testing (S1 → S2 → S3)</p>
                     </div>
                   </div>
-                  <span className="chip text-[11px]">{form.stages.length} stage{form.stages.length > 1 ? 's' : ''}</span>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-[10px] font-mono font-medium bg-white text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded">USP &lt;711&gt;</span>
+                    <span className="text-[10px] font-mono font-medium bg-white text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded">USP &lt;905&gt;</span>
+                    <span className="text-[10px] font-mono font-medium bg-white text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded">USP &lt;701&gt;</span>
+                    <span className="chip text-[11px]">{form.stages.length} stage{form.stages.length > 1 ? 's' : ''}</span>
+                  </div>
                 </div>
 
                 <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
@@ -1485,6 +2272,23 @@ function App() {
                         <div className="font-mono text-slate-700">{form.textFormat || <span className="italic text-slate-400">—</span>}</div>
                       </div>
                     )}
+                    {form.criteriaType === 'custom' && (
+                      <div className="bg-violet-50 rounded-lg p-2.5 text-[11px]">
+                        <div className="font-semibold text-violet-700 mb-1.5">⚙️ {form.customFields.length} ฟิลด์</div>
+                        <div className="space-y-0.5 max-h-32 overflow-y-auto scrollbar">
+                          {form.customFields.slice(0, 8).map((f, i) => (
+                            <div key={f.id} className="flex items-center gap-1.5 text-violet-900/80 truncate">
+                              <span className="w-4 text-violet-500 text-[9px]">{i + 1}.</span>
+                              <span className="truncate flex-1">{f.label || <span className="italic text-violet-400">(ไม่มีชื่อ)</span>}</span>
+                              <span className="text-[9px] bg-white px-1 rounded text-violet-600">{f.type === 'number' ? '🔢' : f.type === 'text' ? '📝' : f.type === 'pass_fail' ? '✓' : '👁'}</span>
+                            </div>
+                          ))}
+                          {form.customFields.length > 8 && (
+                            <div className="text-[10px] text-violet-500 italic">+ อีก {form.customFields.length - 8} ฟิลด์</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Stage flow */}
@@ -1527,13 +2331,71 @@ function App() {
                   </div>
                 </div>
 
+                {/* GMP Compliance Check */}
+                <div className="panel p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                      <span>📜</span> GMP Compliance
+                    </div>
+                    {(() => {
+                      const checks = [
+                        { ok: !!form.testName,        label: 'Test name (USP / Pharmacopoeia)' },
+                        { ok: !!form.code,            label: 'Unique Code (traceability)' },
+                        { ok: form.stages.length > 0, label: `Multi-stage testing (USP <711>/<905>)` },
+                        { ok: form.stages.some(s => s.onFail === 'deviation' || s.onFail === 'reject'), label: 'Fail-action defined (ICH Q9)' },
+                        { ok: triggerSummary.length > 0, label: 'Sampling trigger (PIC/S Annex 8)' },
+                        { ok: form.criteriaType !== 'numeric' || !!form.target, label: 'Acceptance criteria specified' },
+                        { ok: form.active,            label: 'Active for batch production' },
+                      ];
+                      const passed = checks.filter(c => c.ok).length;
+                      const pct = Math.round((passed / checks.length) * 100);
+                      const color = pct >= 80 ? 'emerald' : pct >= 50 ? 'amber' : 'red';
+                      const colorMap = {
+                        emerald: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                        amber: 'bg-amber-100 text-amber-700 border-amber-300',
+                        red: 'bg-red-100 text-red-700 border-red-300',
+                      };
+                      return (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${colorMap[color]}`}>
+                          {passed}/{checks.length} · {pct}%
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    {[
+                      { ok: !!form.testName,        label: 'Test name (USP / Pharmacopoeia)' },
+                      { ok: !!form.code,            label: 'Unique Code (traceability)' },
+                      { ok: form.stages.length > 0, label: 'Multi-stage testing (USP <711>/<905>)' },
+                      { ok: form.stages.some(s => s.onFail === 'deviation' || s.onFail === 'reject'), label: 'Fail-action defined (ICH Q9)' },
+                      { ok: triggerSummary.length > 0, label: 'Sampling trigger (PIC/S Annex 8)' },
+                      { ok: form.criteriaType !== 'numeric' || !!form.target, label: 'Acceptance criteria specified' },
+                      { ok: form.active,            label: 'Active for batch production' },
+                    ].map((c, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${c.ok ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          {c.ok ? '✓' : '·'}
+                        </span>
+                        <span className={c.ok ? 'text-slate-700' : 'text-slate-400'}>{c.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Quick stats */}
                 <div className="panel p-4">
                   <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">Summary</div>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between"><span className="text-slate-500">Stages:</span><span className="font-bold text-slate-700">{form.stages.length}</span></div>
                     <div className="flex justify-between"><span className="text-slate-500">Max samples:</span><span className="font-bold text-slate-700">{form.stages.reduce((s, st) => s + (parseInt(st.sampleSize) || 0), 0)}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Check every:</span><span className="font-bold text-slate-700">{form.checkInterval} min</span></div>
+                    <div>
+                      <span className="text-slate-500 block mb-1">Inspection Triggers:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {triggerSummary.length > 0 ? triggerSummary.map((s, i) => (
+                          <span key={i} className="text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">{s}</span>
+                        )) : <span className="text-amber-600 text-[11px]">⚠ ยังไม่ได้ตั้ง</span>}
+                      </div>
+                    </div>
                     <div className="flex justify-between"><span className="text-slate-500">Sampling:</span><span className="font-medium text-slate-700 truncate ml-2">{samplingMethods.find(m => m.value === form.samplingMethod)?.label.split(' —')[0] || '—'}</span></div>
                   </div>
                 </div>

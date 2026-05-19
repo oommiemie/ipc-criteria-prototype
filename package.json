@@ -1,0 +1,10 @@
+{
+  "name": "ipc-criteria-prototype",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-file React prototype for Herbal ERP IPC Criteria form",
+  "scripts": {
+    "dev": "npx --yes serve@latest -p 5173 .",
+    "start": "npm run dev"
+  }
+}
